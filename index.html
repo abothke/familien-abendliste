@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Islamische Familien-Abendliste zum Ausdrucken: Abendpunkte eintragen, Kreise ausmalen, Belohnung erreichen.">
+<title>Familien-Abendliste</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@500;700;800&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+html,body{margin:0}
+
+/* Layout: links Einstellungen (Name, Punkte, Kreise, Ziel), rechts das fertige Blatt als Bild zum Speichern und Drucken */
+:root{
+  --bg:#F3F6FA; --panel:#FFFFFF; --ink:#1F3A5F; --soft:#5E6B7E; --line:#D7E0EC; --gold:#E0A800; --danger:#C2414F;
+  --display:"Baloo 2","Nunito",system-ui,sans-serif; --body:"Nunito",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#101824; --panel:#18233294; --ink:#E6EDF6; --soft:#A2AFC1; --line:#2A3A50; --gold:#F2C443; --danger:#F08B96; color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#101824; --panel:#18233294; --ink:#E6EDF6; --soft:#A2AFC1; --line:#2A3A50; --gold:#F2C443; --danger:#F08B96; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45}
+.wrap{max-width:1240px;margin:0 auto;padding-block:24px 48px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));display:grid;gap:20px}
+header h1{font-family:var(--display);font-weight:800;font-size:clamp(26px,4vw,34px);margin:0;line-height:1.1}
+header p{margin:4px 0 0;color:var(--soft);max-width:70ch}
+.cols{display:grid;grid-template-columns:minmax(0,400px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:900px){.cols{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;display:grid;gap:16px;min-width:0}
+label.f{display:grid;gap:5px;font-weight:700;font-size:13px;letter-spacing:.02em}
+input[type=text],select{width:100%;font:500 15px var(--body);color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:10px;padding:9px 11px}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+h2{font-family:var(--display);font-size:18px;margin:0}
+.items{display:grid;gap:10px}
+.item{display:grid;grid-template-columns:14px minmax(0,1fr) auto;gap:8px 10px;align-items:start;padding:10px;border:1.5px solid var(--line);border-radius:12px}
+.dot{width:14px;height:14px;border-radius:50%;margin-top:12px}
+.item .txt{display:grid;gap:6px;min-width:0}
+.item .txt input{padding:7px 9px;font-size:14px}
+.item .txt input.t{font-weight:800}
+.item .ctl{display:grid;gap:4px}
+.ib{width:32px;height:30px;border:1.5px solid var(--line);border-radius:8px;background:transparent;color:var(--ink);font:800 15px/1 var(--body);cursor:pointer}
+.ib.del{color:var(--danger)}
+.ib:disabled{opacity:.35;cursor:default}
+.always{grid-column:2/4;display:flex;gap:6px;align-items:center;font-size:13px;color:var(--soft)}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row > *{flex:1 1 140px}
+.btn{border:0;border-radius:999px;padding:10px 18px;font:800 15px var(--body);cursor:pointer;background:var(--ink);color:var(--bg)}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn.warn{background:var(--danger);color:#fff}
+.hint{color:var(--soft);font-size:13px;margin:0}
+.preview{display:grid;gap:12px;min-width:0}
+.preview img{width:100%;height:auto;border-radius:10px;border:1px solid var(--line);background:#fff;display:block}
+.save{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:grid;gap:4px}
+.save b{font-family:var(--display);font-size:16px}
+canvas{display:none}
+@media print{
+  @page{size:A4 landscape;margin:0}
+  body{background:#fff}
+  .wrap{padding:0;max-width:none}
+  header,.panel,.save,.hint{display:none!important}
+  .cols{display:block}
+  .preview img{border:0;border-radius:0;width:100%}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Familien-Abendliste</h1>
+    <p>Namen und Punkte anpassen. Das Blatt rechts aktualisiert sich sofort. Wenn der Weg voll ist, einfach neu speichern und ausdrucken.</p>
+  </header>
+
+  <div class="cols">
+    <section class="panel" aria-label="Einstellungen">
+      <label class="f" for="fam">Familienname <span class="hint" style="font-weight:500">leer lassen = Strich zum Selbsteintragen</span>
+        <input type="text" id="fam" maxlength="28" autocomplete="off">
+      </label>
+
+      <div style="display:grid;gap:10px">
+        <h2>Unsere Abendpunkte</h2>
+        <div class="items" id="items"></div>
+        <div class="row">
+          <button class="btn ghost" id="add" type="button">+ Punkt hinzufügen</button>
+        </div>
+        <p class="hint" id="limit" hidden>Mehr als 8 Punkte passen nicht aufs Blatt.</p>
+      </div>
+
+      <div class="row">
+        <label class="f" for="count">Kreise auf dem Weg
+          <select id="count">
+            <option value="30">30 (ca. 1 Woche)</option>
+            <option value="40">40</option>
+            <option value="50">50</option>
+            <option value="60">60 (ca. 2–3 Wochen)</option>
+            <option value="70">70</option>
+            <option value="80">80 (ca. 4 Wochen)</option>
+          </select>
+        </label>
+      </div>
+      <label class="f" for="reward">Belohnung <span class="hint" style="font-weight:500">optional, sonst Strich zum Eintragen</span>
+        <input type="text" id="reward" maxlength="48" autocomplete="off" placeholder="z. B. Ausflug in den Zoo">
+      </label>
+      <label class="f" for="dua">Dua, die wir gerade lernen <span class="hint" style="font-weight:500">optional</span>
+        <input type="text" id="dua" maxlength="48" autocomplete="off" placeholder="z. B. Rabbi zidni ʿilma">
+      </label>
+
+      <div class="row">
+        <button class="btn ghost" id="reset" type="button">Auf Standard zurücksetzen</button>
+      </div>
+    </section>
+
+    <section class="preview" aria-label="Fertiges Blatt">
+      <img id="out" alt="Vorschau der Familien-Abendliste">
+      <div class="save">
+        <b>Speichern und drucken</b>
+        <div class="row">
+          <button class="btn" id="pdf" type="button">Als PDF herunterladen</button>
+          <button class="btn ghost" id="png" type="button">Als Bild herunterladen</button>
+          <button class="btn ghost" id="prt" type="button">Drucken</button>
+        </div>
+        <span class="hint">Das PDF ist A4 quer und druckfertig.</span>
+      </div>
+      <canvas id="cv" width="2105" height="1488"></canvas>
+    </section>
+  </div>
+</div>
+
+<script>
+const PAL = [["#D5F2F0","#2A9D8F"],["#FDE2E4","#E5737F"],["#D8F3DC","#40916C"],["#D7E9FB","#3A7BD5"],
+             ["#EDE1FB","#8E5CD9"],["#FFE3CF","#E07A2F"],["#FFF1C9","#D19C00"],["#E3E7EE","#5A6B85"]];
+const DEFAULT = {
+  fam:"", count:60, reward:"", dua:"",
+  items:[
+    {t:"Schlafenszeit", s:"Ayat al-Kursi, 3 Quls, Schlaf-Dua, Tasbih, „Wofür bin ich dankbar?“", a:true},
+    {t:"Dua nach dem Gebet", s:"ein Kind spricht sie, reihum", a:false},
+    {t:"Sura üben", s:"5 Minuten, Große neu, Kleine wiederholen", a:false},
+    {t:"Halbe Seite Quran", s:"einer liest vor, alle hören zu", a:false},
+    {t:"Gute Tat erzählen", s:"jeder sagt kurz, was er gemacht hat", a:false},
+    {t:"Prophetengeschichte", s:"kurz vorlesen oder erzählen", a:false}
+  ]
+};
+const KEY="familien-abendliste-v1";
+let st;
+try{ st = JSON.parse(localStorage.getItem(KEY)) }catch(e){}
+if(!st || !Array.isArray(st.items)) st = structuredClone(DEFAULT);
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}};
+
+const $=id=>document.getElementById(id);
+const itemsEl=$("items");
+
+function renderItems(){
+  itemsEl.innerHTML="";
+  st.items.forEach((it,i)=>{
+    const [,ac]=PAL[i%PAL.length];
+    const d=document.createElement("div"); d.className="item";
+    d.innerHTML=`<span class="dot" style="background:${ac}"></span>
+      <div class="txt">
+        <input type="text" class="t" id="t${i}" maxlength="28" aria-label="Punkt ${i+1}: Name">
+        <input type="text" class="s" id="s${i}" maxlength="80" aria-label="Punkt ${i+1}: Beschreibung" placeholder="kurze Beschreibung">
+      </div>
+      <div class="ctl">
+        <button type="button" class="ib" data-up="${i}" aria-label="Nach oben" ${i===0?"disabled":""}>↑</button>
+        <button type="button" class="ib" data-down="${i}" aria-label="Nach unten" ${i===st.items.length-1?"disabled":""}>↓</button>
+        <button type="button" class="ib del" data-del="${i}" aria-label="Entfernen" ${st.items.length<=1?"disabled":""}>×</button>
+      </div>
+      <label class="always"><input type="checkbox" id="a${i}"> jeden Abend (IMMER)</label>`;
+    itemsEl.appendChild(d);
+    const t=d.querySelector(".t"), s=d.querySelector(".s"), a=d.querySelector("#a"+i);
+    t.value=it.t; s.value=it.s; a.checked=!!it.a;
+    t.addEventListener("input",()=>{it.t=t.value;changed()});
+    s.addEventListener("input",()=>{it.s=s.value;changed()});
+    a.addEventListener("change",()=>{it.a=a.checked;changed()});
+  });
+  $("add").disabled = st.items.length>=8;
+  $("limit").hidden = st.items.length<8;
+}
+itemsEl.addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  const L=st.items;
+  if(b.dataset.up){const i=+b.dataset.up;[L[i-1],L[i]]=[L[i],L[i-1]]}
+  else if(b.dataset.down){const i=+b.dataset.down;[L[i+1],L[i]]=[L[i],L[i+1]]}
+  else if(b.dataset.del){L.splice(+b.dataset.del,1)}
+  else return;
+  renderItems(); changed();
+});
+$("add").addEventListener("click",()=>{
+  if(st.items.length>=8) return;
+  st.items.push({t:"Neuer Punkt",s:"",a:false}); renderItems(); changed();
+  const n=st.items.length-1; const el=$("t"+n); el.focus(); el.select();
+});
+function bindField(id,key,num){
+  const el=$(id); el.value=st[key];
+  el.addEventListener(el.tagName==="SELECT"?"change":"input",()=>{st[key]=num?+el.value:el.value;changed()});
+}
+bindField("fam","fam"); bindField("reward","reward"); bindField("dua","dua"); bindField("count","count",true);
+
+let armed=false, armTimer;
+$("reset").addEventListener("click",e=>{
+  const b=e.currentTarget;
+  if(!armed){armed=true;b.textContent="Wirklich zurücksetzen?";b.className="btn warn";
+    clearTimeout(armTimer);armTimer=setTimeout(()=>{armed=false;b.textContent="Auf Standard zurücksetzen";b.className="btn ghost"},4000);return}
+  armed=false;b.textContent="Auf Standard zurücksetzen";b.className="btn ghost";
+  st=structuredClone(DEFAULT);
+  ["fam","reward","dua"].forEach(k=>$(k).value=st[k]); $("count").value=st.count;
+  renderItems(); changed();
+});
+
+let tmr; function changed(){save();clearTimeout(tmr);tmr=setTimeout(draw,120)}
+
+/* ---------- Zeichnen (Einheiten in pt, A4 quer 842×595) ---------- */
+const cv=$("cv"), ctx=cv.getContext("2d"), S=2.5, W=842, H=595;
+const NAVY="#1F3A5F", INK="#2B2B2B", GOLD="#F2B705", SOFT="#6B7280";
+const FD="'Baloo 2', Nunito, sans-serif", FB="Nunito, sans-serif";
+
+function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+function star(cx,cy,r,fill,stroke,lw){
+  ctx.beginPath();
+  for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5, q=i%2?r*.45:r; const x=cx+q*Math.cos(a), y=cy+q*Math.sin(a); i?ctx.lineTo(x,y):ctx.moveTo(x,y)}
+  ctx.closePath(); ctx.fillStyle=fill; ctx.fill();
+  if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw||1.4;ctx.lineJoin="round";ctx.stroke()}
+}
+function moon(cx,cy,r,col,bg){ctx.fillStyle=col;ctx.beginPath();ctx.arc(cx,cy,r,0,7);ctx.fill();ctx.fillStyle=bg;ctx.beginPath();ctx.arc(cx+r*.42,cy-r*.22,r*.85,0,7);ctx.fill()}
+function font(w,size,fam){ctx.font=`${w} ${size}px ${fam}`}
+function fit(text,maxW){ if(ctx.measureText(text).width<=maxW) return text; let t=text; while(t.length&&ctx.measureText(t+"…").width>maxW) t=t.slice(0,-1); return t+"…"}
+function wrap(text,maxW,lines){
+  const words=text.split(/\s+/).filter(Boolean), out=[]; let cur="";
+  for(const w of words){const test=cur?cur+" "+w:w; if(ctx.measureText(test).width<=maxW) cur=test; else {if(cur) out.push(cur); cur=w}}
+  if(cur) out.push(cur);
+  if(out.length>lines){const keep=out.slice(0,lines); keep[lines-1]=fit(out.slice(lines-1).join(" "),maxW); return keep}
+  return out;
+}
+
+function draw(){
+  ctx.setTransform(S,0,0,S,0,0);
+  ctx.fillStyle="#fff"; ctx.fillRect(0,0,W,H);
+  const m=26, hh=80;
+  // Kopf
+  ctx.fillStyle=NAVY; rr(m,m,W-2*m,hh,18); ctx.fill();
+  moon(m+48,m+hh/2,24,GOLD,NAVY);
+  [[m+88,m+22,5],[m+100,m+56,3.5],[W-m-56,m+26,6],[W-m-90,m+58,4.5],[W-m-130,m+24,3],[W-m-30,m+62,3.5]].forEach(([x,y,r])=>star(x,y,r,GOLD));
+  ctx.fillStyle="#fff"; ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+  font(800,32,FD);
+  const name=(st.fam||"").trim();
+  if(name){ctx.textAlign="center";ctx.fillText(fit("Familie "+name,W-300),W/2,m+46)}
+  else{const t="Familie ", tw=ctx.measureText(t).width, ln=210, sx=W/2-(tw+ln)/2; ctx.fillText(t,sx,m+46);
+       ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(sx+tw,m+48);ctx.lineTo(sx+tw+ln,m+48);ctx.stroke()}
+  ctx.textAlign="center"; font(600,12.5,FB); ctx.fillStyle="#DCE6F2";
+  ctx.fillText("Jeder geschaffte Punkt am Abend = einen Kreis ausmalen. Keine Tage, kein Druck.",W/2,m+66);
+
+  // Linke Spalte
+  const lx=m, lw=268, top=m+hh+14;
+  ctx.textAlign="left"; ctx.fillStyle=NAVY; font(800,15,FD); ctx.fillText("Unsere Abendpunkte",lx+4,top+14);
+  const items=st.items.length?st.items:[{t:"",s:"",a:false}];
+  const hasAlways=items.some(i=>i.a);
+  const areaTop=top+24, areaBot=H-40-52-(hasAlways?24:8);
+  const gap=6, n=items.length;
+  const h=Math.max(34,Math.min(54,(areaBot-areaTop-gap*(n-1))/n));
+  let y=areaTop;
+  items.forEach((it,i)=>{
+    const [bg,ac]=PAL[i%PAL.length];
+    ctx.fillStyle=bg; rr(lx,y,lw,h,11); ctx.fill();
+    ctx.fillStyle=ac; ctx.beginPath(); ctx.arc(lx+20,y+h/2,10.5,0,7); ctx.fill();
+    ctx.fillStyle="#fff"; font(800,12,FB); ctx.textAlign="center"; ctx.fillText(String(i+1),lx+20,y+h/2+4.2); ctx.textAlign="left";
+    const title=(it.t||"").trim()||"…";
+    const subs=(it.s||"").trim();
+    const lines = subs ? (h>=48?2:1) : 0;
+    font(800,13.5,FB); ctx.fillStyle=INK;
+    let pillW = it.a?46:0;
+    const tt=fit(title,lw-48-(pillW?pillW+10:0)-8);
+    const ty = lines? y+ (h - (15 + lines*11))/2 + 12 : y+h/2+5;
+    ctx.fillText(tt,lx+40,ty);
+    if(it.a){const tw=ctx.measureText(tt).width; ctx.fillStyle=ac; rr(lx+46+tw,ty-11,pillW,14,7); ctx.fill();
+      ctx.fillStyle="#fff"; font(800,8.5,FB); ctx.textAlign="center"; ctx.fillText("IMMER",lx+46+tw+pillW/2,ty-1); ctx.textAlign="left"}
+    if(lines){font(600,9.2,FB); ctx.fillStyle=SOFT; wrap(subs,lw-50,lines).forEach((l,k)=>ctx.fillText(l,lx+40,ty+13+k*11))}
+    y+=h+gap;
+  });
+  if(hasAlways){ctx.fillStyle=SOFT; font(600,9,FB); ctx.fillText("IMMER = jeden Abend. Der Rest ist Extra: Was klappt, zählt.",lx+4,y+8)}
+  // Dua-Box
+  const dy0=H-40-52;
+  ctx.fillStyle="#FFF8E1"; ctx.strokeStyle=GOLD; ctx.lineWidth=1.6; rr(lx,dy0,lw,52,11); ctx.fill(); ctx.stroke();
+  star(lx+18,dy0+16,7,GOLD);
+  ctx.fillStyle=NAVY; font(800,12.5,FB); ctx.fillText("Diese Dua lernen wir gerade:",lx+32,dy0+20);
+  const dua=(st.dua||"").trim();
+  if(dua){ctx.fillStyle=INK; font(700,12,FB); ctx.fillText(fit(dua,lw-28),lx+14,dy0+40)}
+  else{ctx.strokeStyle="#C9B37A";ctx.lineWidth=.8;ctx.beginPath();ctx.moveTo(lx+14,dy0+42);ctx.lineTo(lx+lw-14,dy0+42);ctx.stroke()}
+
+  // Weg
+  const px0=lx+lw+24, px1=W-m, cx0=px0+22, cx1=px1-22;
+  const goalH=64, goalY=H-40-goalH;
+  const count=st.count||60, cols=10, rows=Math.ceil(count/cols);
+  const y0=top+22, yMax=goalY-30;
+  const dyR = rows>1 ? Math.min(78,(yMax-y0)/(rows-1)) : 0;
+  const used = (rows-1)*dyR, yStart = y0 + ((yMax-y0)-used)/2*(dyR===78?1:0);
+  const r=15, dx=(cx1-cx0)/(cols-1);
+  const pts=[];
+  for(let k=0;k<count;k++){const row=Math.floor(k/cols), c=k%cols, col=row%2? cols-1-c : c; pts.push([cx0+col*dx, yStart+row*dyR])}
+  ctx.strokeStyle="#C9D5E6"; ctx.lineWidth=9; ctx.lineCap="round"; ctx.lineJoin="round";
+  ctx.beginPath(); ctx.moveTo(...pts[0]);
+  for(let i=1;i<pts.length;i++){const [x0,y0b]=pts[i-1],[x1,y1]=pts[i];
+    if(Math.abs(y1-y0b)>1){const side=x1>(px0+px1)/2?1:-1, bx=x0+side*26; ctx.bezierCurveTo(bx,y0b,bx,y1,x1,y1)} else ctx.lineTo(x1,y1)}
+  ctx.stroke();
+  ctx.fillStyle=NAVY; font(800,10,FB); ctx.textAlign="center"; ctx.fillText("START",pts[0][0],pts[0][1]-r-6);
+  pts.forEach(([x,yy],i)=>{const n=i+1;
+    if(n%10===0){star(x,yy,r+4,"#fff",GOLD,2); ctx.fillStyle="#B88600"; font(800,8.5,FB); ctx.fillText(String(n),x,yy+3.5)}
+    else{ctx.fillStyle="#fff"; ctx.strokeStyle=NAVY; ctx.lineWidth=1.6; ctx.beginPath(); ctx.arc(x,yy,r,0,7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle="#AAB6C8"; font(600,8,FB); ctx.fillText(String(n),x,yy+3)}
+  });
+  if(count%10!==0){const [x,yy]=pts[pts.length-1]; star(x,yy,r+4,"#fff",GOLD,2); ctx.fillStyle="#B88600"; font(800,8.5,FB); ctx.fillText(String(count),x,yy+3.5)}
+  // Ziel
+  ctx.textAlign="left";
+  ctx.fillStyle="#FFF8E1"; ctx.strokeStyle=GOLD; ctx.lineWidth=2.2; rr(px0,goalY,px1-px0,goalH,14); ctx.fill(); ctx.stroke();
+  star(px0+30,goalY+goalH/2,16,GOLD);
+  ctx.fillStyle=NAVY; font(800,17,FD); ctx.fillText("Ziel erreicht! Unsere Belohnung:",px0+58,goalY+26);
+  const rew=(st.reward||"").trim();
+  if(rew){ctx.fillStyle=INK; font(800,15,FB); ctx.fillText(fit(rew,px1-px0-80),px0+58,goalY+50)}
+  else{ctx.strokeStyle="#C9B37A";ctx.lineWidth=.9;ctx.beginPath();ctx.moveTo(px0+58,goalY+48);ctx.lineTo(px1-20,goalY+48);ctx.stroke()}
+  // Fuß
+  ctx.textAlign="center"; ctx.fillStyle=SOFT; font(600,9,FB);
+  ctx.fillText("Die liebsten Taten bei Allah sind die beständigen, auch wenn sie klein sind.  ·  Weg voll? Neues Blatt, neue Belohnung.",W/2,H-14);
+
+  try{$("out").src=cv.toDataURL("image/png")}catch(e){}
+}
+
+function fname(ext){const n=(st.fam||"").trim().replace(/[^\p{L}\p{N}-]+/gu,"-");return `Abendliste${n?"-"+n:""}.${ext}`}
+$("pdf").addEventListener("click",()=>{draw();const {jsPDF}=window.jspdf||{};
+  if(!jsPDF){$("png").click();return}
+  const doc=new jsPDF({orientation:"landscape",unit:"pt",format:"a4"});
+  doc.addImage(cv.toDataURL("image/png"),"PNG",0,0,842,595);doc.save(fname("pdf"))});
+$("png").addEventListener("click",()=>{draw();const a=document.createElement("a");a.href=cv.toDataURL("image/png");a.download=fname("png");document.body.appendChild(a);a.click();a.remove()});
+$("prt").addEventListener("click",()=>{draw();setTimeout(()=>window.print(),50)});
+
+renderItems();
+draw();
+Promise.all(["800 32px 'Baloo 2'","800 13px Nunito","600 9px Nunito","700 12px Nunito"].map(f=>document.fonts.load(f).catch(()=>{}))).then(()=>document.fonts.ready).then(draw);
+</script>
+</body>
+</html>
