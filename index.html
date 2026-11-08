@@ -9,6 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 html,body{margin:0}
+[hidden]{display:none!important}
 
 /* Layout: links Einstellungen (Name, Punkte, Kreise, Ziel), rechts das fertige Blatt als Bild zum Speichern und Drucken */
 :root{
@@ -52,12 +53,39 @@ h2{font-family:var(--display);font-size:18px;margin:0}
 .save{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:grid;gap:4px}
 .save b{font-family:var(--display);font-size:16px}
 canvas{display:none}
+/* Reiter */
+.tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1.5px solid var(--line);padding-bottom:0}
+.tabs a{padding:10px 16px;border-radius:12px 12px 0 0;font:800 15px var(--body);color:var(--soft);text-decoration:none;border:1.5px solid transparent;border-bottom:0;margin-bottom:-1.5px}
+.tabs a[aria-current="page"]{color:var(--ink);background:var(--panel);border-color:var(--line)}
+.tabs a:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+/* Gute Tat */
+.tat{max-width:640px;margin:0 auto;width:100%;display:grid;gap:18px}
+.picker{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
+.step{width:52px;height:52px;border-radius:50%;border:2px solid var(--line);background:var(--panel);color:var(--ink);font:800 26px/1 var(--display);cursor:pointer}
+#num{width:104px;height:68px;text-align:center;font:800 38px/1 var(--display);color:var(--ink);background:var(--panel);border:3px solid var(--line);border-radius:18px;-moz-appearance:textfield}
+#num::-webkit-outer-spin-button,#num::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.last{text-align:center;color:var(--soft);margin:0}
+.last button{border:0;background:none;color:var(--ink);font:800 15px var(--body);text-decoration:underline;cursor:pointer;padding:0}
+.card{background:var(--tint);border:3px solid var(--acc);border-radius:26px;padding:24px 22px 26px;display:grid;gap:10px;justify-items:center;text-align:center}
+.badge{width:80px;height:80px;border-radius:50%;background:var(--acc);color:#fff;display:grid;place-items:center;font:800 40px/1 var(--display)}
+.emoji{font-size:52px;line-height:1}
+.deed{font-family:var(--display);font-weight:800;font-size:clamp(23px,5vw,29px);line-height:1.2;margin:0;color:#1F2A37;text-wrap:balance}
+.note{margin:0;color:#4B5563;font-size:15px;max-width:44ch}
+.pop{animation:pop .35s ease-out}
+@keyframes pop{from{transform:scale(.95)}to{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.pop{animation:none}}
+.ngrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(50px,1fr));gap:8px}
+.ngrid button{aspect-ratio:1;max-width:100%;border-radius:12px;border:2px solid var(--acc);background:var(--tint);color:var(--acc);font:800 19px/1 var(--display);cursor:pointer}
+.ngrid button[aria-current="true"]{background:var(--acc);color:#fff}
+.err{color:var(--danger);text-align:center;margin:-6px 0 0;font-weight:700}
+/* Kärtchen */
+.kcols{display:grid;grid-template-columns:minmax(0,320px) minmax(0,520px);gap:20px;align-items:start;justify-content:center}
+@media (max-width:900px){.kcols{grid-template-columns:minmax(0,1fr)}}
 @media print{
-  @page{size:A4 landscape;margin:0}
   body{background:#fff}
   .wrap{padding:0;max-width:none}
-  header,.panel,.save,.hint{display:none!important}
-  .cols{display:block}
+  header,.tabs,.panel,.save,.hint,[data-view="tat"]{display:none!important}
+  .cols,.kcols{display:block}
   .preview img{border:0;border-radius:0;width:100%}
 }
 </style>
@@ -67,10 +95,54 @@ canvas{display:none}
 <div class="wrap">
   <header>
     <h1>Familien-Abendliste</h1>
-    <p>Namen und Punkte anpassen. Das Blatt rechts aktualisiert sich sofort. Wenn der Weg voll ist, einfach neu speichern und ausdrucken.</p>
+    <p id="lead"></p>
   </header>
 
-  <div class="cols">
+  <nav class="tabs" aria-label="Bereiche">
+    <a href="#liste" data-tab="liste">Abendliste</a>
+    <a href="#tat" data-tab="tat">Gute Tat nachschauen</a>
+    <a href="#kaertchen" data-tab="kaertchen">Zahlenkärtchen</a>
+  </nav>
+
+  <section class="tat" data-view="tat" hidden aria-label="Gute Tat nachschauen">
+    <form class="picker" id="tf" novalidate>
+      <button type="button" class="step" id="minus" aria-label="Eins weniger">−</button>
+      <input id="num" type="number" inputmode="numeric" min="1" max="50" value="1" aria-label="Gezogene Zahl">
+      <button type="button" class="step" id="plus" aria-label="Eins mehr">+</button>
+      <button type="submit" class="btn" style="height:52px">Zeigen</button>
+    </form>
+    <p class="err" id="terr" hidden>Bitte eine Zahl von 1 bis 50 eingeben.</p>
+    <p class="last" id="last" hidden></p>
+    <article class="card" id="card" aria-live="polite">
+      <div class="badge" id="badge">1</div>
+      <div class="emoji" id="emoji" aria-hidden="true"></div>
+      <p class="deed" id="deed"></p>
+      <p class="note" id="note" hidden></p>
+    </article>
+    <div>
+      <h2 style="text-align:center;margin-bottom:10px">Oder einfach antippen</h2>
+      <div class="ngrid" id="ngrid"></div>
+    </div>
+  </section>
+
+  <div class="kcols" data-view="kaertchen" hidden>
+    <section class="panel" aria-label="Zahlenkärtchen">
+      <h2>Zahlenkärtchen 1 bis 50</h2>
+      <p class="hint">Ein A4-Blatt hochkant mit allen 50 Zahlen als Quadrate (ca. 2,9 cm) zum Ausschneiden. Falten, ins Glas legen und jeden Tag eine ziehen. Die Farben passen zu den Karten unter „Gute Tat nachschauen“.</p>
+      <div class="row">
+        <button class="btn" id="kpdf" type="button">Als PDF herunterladen</button>
+        <button class="btn ghost" id="kpng" type="button">Als Bild herunterladen</button>
+        <button class="btn ghost" id="kprt" type="button">Drucken</button>
+      </div>
+      <p class="hint">Beim Drucken „Tatsächliche Größe“ wählen, nicht „An Seite anpassen“.</p>
+    </section>
+    <section class="preview" aria-label="Vorschau Zahlenkärtchen">
+      <img id="kout" alt="Vorschau der Zahlenkärtchen 1 bis 50">
+      <canvas id="kcv" width="1488" height="2105"></canvas>
+    </section>
+  </div>
+
+  <div class="cols" data-view="liste">
     <section class="panel" aria-label="Einstellungen">
       <label class="f" for="fam">Familienname <span class="hint" style="font-weight:500">leer lassen = Strich zum Selbsteintragen</span>
         <input type="text" id="fam" maxlength="28" autocomplete="off">
@@ -135,7 +207,7 @@ const DEFAULT = {
     {t:"Dua nach dem Gebet", s:"ein Kind spricht sie, reihum", a:false},
     {t:"Sura üben", s:"5 Minuten, Große neu, Kleine wiederholen", a:false},
     {t:"Halbe Seite Quran", s:"einer liest vor, alle hören zu", a:false},
-    {t:"Gute Tat erzählen", s:"jeder sagt kurz, was er gemacht hat", a:false},
+    {t:"Gezogene Tat geschafft?", s:"die gute Tat vom Vortag: hat jeder sie umgesetzt?", a:false},
     {t:"Prophetengeschichte", s:"kurz vorlesen oder erzählen", a:false}
   ]
 };
@@ -143,6 +215,7 @@ const KEY="familien-abendliste-v1";
 let st;
 try{ st = JSON.parse(localStorage.getItem(KEY)) }catch(e){}
 if(!st || !Array.isArray(st.items)) st = structuredClone(DEFAULT);
+st.items.forEach(it=>{ if(it.t==="Gute Tat erzählen" && it.s==="jeder sagt kurz, was er gemacht hat"){ it.t="Gezogene Tat geschafft?"; it.s="die gute Tat vom Vortag: hat jeder sie umgesetzt?" } });
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}};
 
 const $=id=>document.getElementById(id);
@@ -329,9 +402,153 @@ $("pdf").addEventListener("click",()=>{draw();const {jsPDF}=window.jspdf||{};
 $("png").addEventListener("click",()=>{draw();const a=document.createElement("a");a.href=cv.toDataURL("image/png");a.download=fname("png");document.body.appendChild(a);a.click();a.remove()});
 $("prt").addEventListener("click",()=>{draw();setTimeout(()=>window.print(),50)});
 
+/* ---------- Gute Taten ---------- */
+const CARD = [["#FDE2E4","#D9606D"],["#FFF1C9","#B88600"],["#D8F3DC","#2F7D58"],["#D7E9FB","#2F6CC4"],
+              ["#EDE1FB","#7A47C9"],["#FFE3CF","#C9661F"],["#D5F2F0","#1F8578"]];
+const tone=n=>CARD[(n-1)%7];
+const D = [
+ ["🍽️","Deck heute den Tisch, ohne dass dich jemand fragt."],
+ ["🥤","Bring Mama oder Papa ein Glas Wasser."],
+ ["👟","Stell alle Schuhe im Flur ordentlich hin, auch die von den anderen."],
+ ["🧸","Räum dein Zimmer auf, bevor es jemand sagt."],
+ ["🥕","Hilf beim Kochen oder trag die Einkäufe mit rein."],
+ ["🤗","Sag Mama und Papa, dass du sie lieb hast. Mit Umarmung!"],
+ ["👂","Mach heute alles beim ersten Mal, wenn Mama oder Papa dich um etwas bitten."],
+ ["🗑️","Bring den Müll raus."],
+ ["👕","Hilf beim Wäsche zusammenlegen."],
+ ["🤲","Mach eine Dua für Mama und Papa.","Rabbi irhamhuma kama rabbayani saghira: Mein Herr, sei barmherzig mit ihnen, so wie sie mich als Kind großgezogen haben."],
+ ["🍪","Teile heute dein Spielzeug oder deinen Snack."],
+ ["✏️","Hilf deinem Bruder oder deiner Schwester, zum Beispiel bei den Hausaufgaben oder beim Anziehen."],
+ ["📖","Lies deinem Geschwister etwas vor oder erzähl ihm eine Geschichte."],
+ ["🕊️","Habt ihr euch gestritten? Sag du als Erster „Entschuldigung“."],
+ ["🌟","Lobe heute dein Geschwister vor den anderen."],
+ ["🪑","Lass heute jemand anderem den besseren Platz oder das letzte Stück."],
+ ["🎲","Spiel mit, wenn dein Geschwister dich fragt, auch wenn du gerade keine Lust hast."],
+ ["👋","Sag heute immer als Erster „As-salamu ʿalaykum“."],
+ ["😊","Lächle heute ganz viele Menschen an.","Ein Lächeln ist auch Sadaqa!"],
+ ["🤐","Sag heute nichts Gemeines über andere, auch nicht hinter ihrem Rücken."],
+ ["✅","Sag heute immer die Wahrheit, auch wenn es mal schwer ist."],
+ ["🙏","Sag heute bei allem „Bitte“ und „Danke“."],
+ ["💐","Mach heute jemandem ein schönes Kompliment."],
+ ["🌬️","Wenn du heute wütend wirst: tief durchatmen und ruhig bleiben."],
+ ["🤝","Halte heute ein Versprechen, das du gegeben hast."],
+ ["🧒","Sprich ein Kind an, das allein ist, und spiel mit ihm."],
+ ["💡","Erklär einem Kind in der Schule etwas, das es nicht versteht."],
+ ["🖍️","Leih jemandem deinen Stift oder Radiergummi."],
+ ["🛡️","Hilf einem Kind, das geärgert wird."],
+ ["🧽","Hilf heute deiner Lehrerin oder deinem Lehrer, zum Beispiel beim Tafelwischen."],
+ ["🏡","Lade einen Freund oder eine Freundin zum Spielen ein."],
+ ["🚪","Grüß heute die Nachbarn freundlich."],
+ ["🧁","Backt zusammen etwas und bringt es den Nachbarn."],
+ ["👵","Halte einem älteren Menschen die Tür auf oder trag seine Tasche."],
+ ["🚌","Biete im Bus oder in der Bahn deinen Sitzplatz an."],
+ ["📞","Ruf Oma, Opa oder jemanden aus der Familie an."],
+ ["🎨","Mal ein Bild für jemanden, der krank ist oder traurig."],
+ ["🕌","Räum nach dem Gebet die Gebetsteppiche ordentlich weg."],
+ ["🪙","Wirf eine Münze in die Sadaqa-Spardose."],
+ ["🎁","Such ein Spielzeug oder Kleidung aus, die du verschenken möchtest."],
+ ["🍎","Gib jemandem etwas zu essen oder zu trinken aus."],
+ ["💬","Überlegt zusammen: Wem wollen wir mit einer Spende helfen?"],
+ ["🌍","Heb Müll auf, auch wenn er nicht von dir ist.","Etwas Störendes vom Weg zu nehmen ist Teil des Iman."],
+ ["🐦","Stell den Vögeln eine Schale Wasser oder etwas Futter hin."],
+ ["💧","Spar beim Wudu Wasser: den Hahn nur ein bisschen aufdrehen."],
+ ["🌱","Gieß heute die Pflanzen."],
+ ["💡","Mach das Licht aus, wenn keiner im Zimmer ist."],
+ ["❤️","Verzeih heute jemandem, der gemein zu dir war."],
+ ["🤫","Tu heimlich etwas Gutes und verrate nicht, was es war.","Nur Allah weiß es! Abends sagst du nur: „Geschafft!“"],
+ ["🤲","Mach eine Dua für jemanden, ohne dass er es weiß."]
+];
+const LKEY="familien-abendliste-letzte-tat";
+const num=$("num"), card=$("card"), ngrid=$("ngrid");
+D.forEach((_,i)=>{
+  const n=i+1, [bg,ac]=tone(n), b=document.createElement("button");
+  b.type="button"; b.textContent=n; b.id="n"+n; b.style.setProperty("--acc",ac); b.style.setProperty("--tint",bg);
+  b.addEventListener("click",()=>{num.value=n;showTat(n,true);card.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth",block:"center"})});
+  ngrid.appendChild(b);
+});
+function readLast(){try{return JSON.parse(localStorage.getItem(LKEY))}catch(e){return null}}
+function renderLast(){
+  const l=readLast(), el=$("last");
+  if(!l||!l.n){el.hidden=true;return}
+  const d=new Date(l.d), today=new Date(), y=new Date(); y.setDate(today.getDate()-1);
+  const same=(a,b)=>a.toDateString()===b.toDateString();
+  const when= same(d,today)?"heute":same(d,y)?"gestern":"am "+d.toLocaleDateString("de-DE",{weekday:"short",day:"2-digit",month:"2-digit"});
+  el.innerHTML=`Zuletzt nachgeschaut (${when}): <button type="button" id="lastbtn">Nr. ${l.n}</button>`;
+  $("lastbtn").addEventListener("click",()=>{num.value=l.n;showTat(l.n,false)});
+  el.hidden=false;
+}
+function showTat(n,remember){
+  if(!Number.isInteger(n)||n<1||n>50){$("terr").hidden=false;return}
+  $("terr").hidden=true;
+  const [e,text,note]=D[n-1], [bg,ac]=tone(n);
+  card.style.setProperty("--acc",ac); card.style.setProperty("--tint",bg);
+  $("badge").textContent=n; $("emoji").textContent=e; $("deed").textContent=text;
+  $("note").textContent=note||""; $("note").hidden=!note;
+  ngrid.querySelectorAll("button").forEach(b=>b.setAttribute("aria-current", String(b.id==="n"+n)));
+  card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop");
+  if(remember){try{localStorage.setItem(LKEY,JSON.stringify({n,d:Date.now()}))}catch(err){} renderLast()}
+}
+$("tf").addEventListener("submit",e=>{e.preventDefault();showTat(parseInt(num.value,10),true)});
+$("minus").addEventListener("click",()=>{const v=Math.max(1,(parseInt(num.value,10)||1)-1);num.value=v;showTat(v,true)});
+$("plus").addEventListener("click",()=>{const v=Math.min(50,(parseInt(num.value,10)||0)+1);num.value=v;showTat(v,true)});
+
+/* ---------- Zahlenkärtchen (A4 hoch, pt 595×842) ---------- */
+const kcv=$("kcv"), kx=kcv.getContext("2d"), KW=595, KH=842, MM=72/25.4;
+function kstar(cx,cy,r,fill){kx.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,q=i%2?r*.45:r;const x=cx+q*Math.cos(a),y=cy+q*Math.sin(a);i?kx.lineTo(x,y):kx.moveTo(x,y)}kx.closePath();kx.fillStyle=fill;kx.fill()}
+function krr(x,y,w,h,r){kx.beginPath();kx.moveTo(x+r,y);kx.arcTo(x+w,y,x+w,y+h,r);kx.arcTo(x+w,y+h,x,y+h,r);kx.arcTo(x,y+h,x,y,r);kx.arcTo(x,y,x+w,y,r);kx.closePath()}
+function drawCards(){
+  kx.setTransform(S,0,0,S,0,0); kx.fillStyle="#fff"; kx.fillRect(0,0,KW,KH);
+  kx.textAlign="center"; kx.textBaseline="alphabetic";
+  kx.fillStyle=NAVY; kx.font=`800 24px ${FD}`; kx.fillText("Unsere guten Taten",KW/2,16*MM);
+  kstar(KW/2-64*MM,14*MM-3,3.2*MM,GOLD); kstar(KW/2+64*MM,14*MM-3,3.2*MM,GOLD);
+  kx.fillStyle=SOFT; kx.font=`600 10px ${FB}`;
+  kx.fillText("Ausschneiden, falten, ins Glas legen. Jeden Tag eine Zahl ziehen.",KW/2,22*MM);
+  const cols=6, s=29*MM, x0=(KW-cols*s)/2, y0=26*MM, pad=2.2*MM;
+  for(let n=1;n<=50;n++){
+    const i=n-1, col=i%cols, row=Math.floor(i/cols), x=x0+col*s, y=y0+row*s, [bg,ac]=tone(n);
+    kx.fillStyle=bg; kx.strokeStyle=ac; kx.lineWidth=1.5; krr(x+pad,y+pad,s-2*pad,s-2*pad,3*MM); kx.fill(); kx.stroke();
+    kx.fillStyle=ac; kx.font=`800 32px ${FD}`; kx.fillText(String(n),x+s/2,y+s/2+11);
+    kstar(x+s-6.5*MM,y+6.5*MM,2*MM,GOLD);
+  }
+  kx.strokeStyle="#9CA3AF"; kx.lineWidth=.5; kx.setLineDash([3,3]);
+  const full=Math.floor(50/cols), last=50%cols;
+  kx.beginPath();
+  for(let r=0;r<=full;r++){kx.moveTo(x0,y0+r*s);kx.lineTo(x0+cols*s,y0+r*s)}
+  kx.moveTo(x0,y0+(full+1)*s); kx.lineTo(x0+last*s,y0+(full+1)*s);
+  for(let k=0;k<=cols;k++){const b=y0+(full+(k<=last?1:0))*s; kx.moveTo(x0+k*s,y0); kx.lineTo(x0+k*s,b)}
+  kx.stroke(); kx.setLineDash([]);
+  kx.textAlign="left"; kx.fillStyle=SOFT; kx.font=`600 8.5px ${FB}`;
+  kx.fillText("✂  entlang der gestrichelten Linien schneiden",x0,y0+(full+1)*s+4*MM);
+  try{$("kout").src=kcv.toDataURL("image/png")}catch(e){}
+}
+$("kpdf").addEventListener("click",()=>{drawCards();const {jsPDF}=window.jspdf||{};
+  if(!jsPDF){$("kpng").click();return}
+  const doc=new jsPDF({orientation:"portrait",unit:"pt",format:"a4"});
+  doc.addImage(kcv.toDataURL("image/png"),"PNG",0,0,KW,KH);doc.save("Gute-Taten-Zahlen-1-50.pdf")});
+$("kpng").addEventListener("click",()=>{drawCards();const a=document.createElement("a");a.href=kcv.toDataURL("image/png");a.download="Gute-Taten-Zahlen-1-50.png";document.body.appendChild(a);a.click();a.remove()});
+$("kprt").addEventListener("click",()=>{drawCards();setTimeout(()=>window.print(),50)});
+
+/* ---------- Reiter ---------- */
+const LEAD={
+  liste:"Namen und Punkte anpassen. Das Blatt rechts aktualisiert sich sofort. Wenn der Weg voll ist, einfach neu speichern und ausdrucken.",
+  tat:"Gezogene Zahl eingeben und die gute Tat für heute sehen. Abends könnt ihr hier nachschauen, welche Tat gestern dran war.",
+  kaertchen:"Die Zahlen 1 bis 50 zum Ausschneiden für euer Gute-Taten-Glas."
+};
+const pageStyle=document.createElement("style"); document.head.appendChild(pageStyle);
+function route(){
+  const v=(location.hash||"#liste").slice(1), view=LEAD[v]?v:"liste";
+  document.querySelectorAll("[data-view]").forEach(el=>el.hidden=el.dataset.view!==view);
+  document.querySelectorAll("[data-tab]").forEach(a=>a.setAttribute("aria-current", a.dataset.tab===view?"page":"false"));
+  $("lead").textContent=LEAD[view];
+  pageStyle.textContent=`@media print{@page{size:A4 ${view==="kaertchen"?"portrait":"landscape"};margin:0}}`;
+}
+addEventListener("hashchange",route);
+
 renderItems();
-draw();
-Promise.all(["800 32px 'Baloo 2'","800 13px Nunito","600 9px Nunito","700 12px Nunito"].map(f=>document.fonts.load(f).catch(()=>{}))).then(()=>document.fonts.ready).then(draw);
+draw(); drawCards();
+const l0=readLast(); if(l0&&l0.n){num.value=l0.n; showTat(l0.n,false)} else showTat(1,false);
+renderLast(); route();
+Promise.all(["800 32px 'Baloo 2'","800 13px Nunito","600 9px Nunito","700 12px Nunito"].map(f=>document.fonts.load(f).catch(()=>{}))).then(()=>document.fonts.ready).then(()=>{draw();drawCards()});
 </script>
 </body>
 </html>
